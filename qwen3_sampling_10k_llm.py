@@ -18,8 +18,7 @@ def calculate_probs(prompt, eos, model, tokenizer, device):
 
     with torch.no_grad():
         output = model(input_ids)
-        logits = output.logits[:, -1, :]
-        probs = torch.softmax(logits, dim=-1)[0]
+        logits = output.logits
 
     numbers = ["0", "1", "2","3","4","5","6","7","8","9"]
     indexes = [tokenizer.encode(number, add_special_tokens=False) for number in numbers]
@@ -32,6 +31,11 @@ def calculate_probs(prompt, eos, model, tokenizer, device):
     word_probs = {}
     for idx_list in indexes:
         token_id = idx_list[0]
+        if len(prompt_ids) == 0:
+            raise ValueError("Prompt vacío, no se puede calcular probabilidad condicional.")
+
+        # Logit de posición correspondiente al token_id esperado
+        probs = torch.softmax(logits[0, -1, :], dim=-1)
         prob = probs[token_id]
         word = tokenizer.decode([token_id]).strip()
         word_probs[word] = prob.item()
@@ -39,6 +43,7 @@ def calculate_probs(prompt, eos, model, tokenizer, device):
     total = sum(word_probs.values())
     normalized_word_probs = {word: p / total for word, p in word_probs.items()}
     return normalized_word_probs
+
 
 def print_if_not_silent(message):
     """Función auxiliar para imprimir solo si SILENT no es True."""
@@ -57,7 +62,7 @@ def sample():
 
     # --- Configuración inicial y creación de carpeta con timestamp ---
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = f"output_{timestamp}"
+    output_dir = f"output_llm_{timestamp}"
     os.makedirs(output_dir, exist_ok=True)
     print_if_not_silent(f"Creando directorio de salida: '{output_dir}' para guardar los resultados.")
 
@@ -147,7 +152,7 @@ def sample():
         sample_end_time = time.time() # Finalizar el tiempo para esta muestra/número flotante
         sample_duration = sample_end_time - sample_start_time
         
-        final_result = ''.join(prompt[1:])
+        final_result = ''.join(prompt)  # incluye el punto inicial
         results.append(final_result) # Agrega el número flotante completo a los resultados
 
         total_samples_completed += 1 # Un número flotante más completado
