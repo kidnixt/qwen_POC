@@ -1,0 +1,17 @@
+--- Execution Parameters ---
+Date and Time of Execution: 2025-06-17 22:44:24
+Output Directory: output_pdfa_20250617_224321
+Model ID: Qwen/Qwen3-1.7B
+Execution Device: cuda
+Model Data Type (dtype): torch.bfloat16
+Tokenizer EOS Token: '<|im_end|>' (ID: 151645)
+Random Seed: 42 (fixed for reproducibility)
+--------------------------------
+Number of Floating Points to Generate: 10000
+--------------------------------
+--- Generation Metrics ---
+Total floating points generated: 10000
+Total generation time: 3.74 seconds
+Average time per floating point: 0.0004 seconds/number
+PDFA Learning Time: 54.55 seconds
+--------------------------------

@@ -1,0 +1,18 @@
+--- Parámetros de Ejecución ---
+Fecha y Hora de Ejecución: 2025-06-16 17:52:54
+Directorio de Salida: output_20250616_145900
+ID del Modelo: Qwen/Qwen3-1.7B
+Dispositivo de Ejecución: cuda
+Tipo de Datos del Modelo (dtype): torch.bfloat16
+Token EOS del Tokenizer: '<|im_end|>' (ID: 151645)
+Semilla Aleatoria: 42 (fija para reproducibilidad)
+--------------------------------
+Cantidad de Números Flotantes a Generar: 10000
+Dígitos Mínimos por Número: 1
+Dígitos Máximos por Número: 10
+--------------------------------
+--- Métricas de Generación ---
+Total de números flotantes generados: 10000
+Tiempo total de generación: 10427.85 segundos
+Tiempo promedio por número flotante: 1.04 segundos/número
+--------------------------------
