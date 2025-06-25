@@ -1,0 +1,35 @@
+--- Execution Parameters ---
+Date and Time: 2025-06-25 16:30:42
+Output Directory: output_pdfa_20250625_162940
+Model ID: Qwen/Qwen3-1.7B
+Execution Device: cuda
+Model Dtype: torch.bfloat16
+Tokenizer EOS Token: '<|im_end|>' (ID: 151645)
+Random Seed: 42
+--------------------------------
+Number of Floating Points: 10000
+Total Time: 3.45s
+Average Time per Number: 0.0003s
+PDFA Learning Time: 54.21s
+--------------------------------
+[SyncronicModelGuidedLanguageModel]
+  model_name: Qwen/Qwen3-1.7B
+  max_seq_length: 50
+  normalize_outputs: True
+
+[HypothesisAwareSampleProbabilisticTeacher]
+  sample_size: 100
+  max_seq_length: 4
+
+[QuantizationProbabilityPartitionerPlus]
+  kappa: 100
+
+[BoundedPDFAQuantizationNAryTreeLearner]
+  max_states: 15
+  max_query_length: 6
+  max_seconds_run: 30
+  generate_partial_hipothesis: True
+  pre_cache_queries_for_building_hipothesis: True
+  check_probabilistic_hipothesis: True
+  mean_distribution_for_partial_hipothesis: True
+  omit_zero_transitions: True
