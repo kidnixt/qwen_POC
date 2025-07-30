@@ -1,0 +1,123 @@
+{
+    "unknown_state_name": "UNKNOWN",
+    "distribution": [
+        1.2633030801434948e-08,
+        0.0,
+        0.07790246144666564,
+        0.09449134067468541,
+        0.08522326620317716,
+        0.08785316821361638,
+        0.09717553662846565,
+        0.11126459481951309,
+        0.10652522032963638,
+        0.10622403544409288,
+        0.1021680250314403,
+        0.13117233857567634
+    ],
+    "num_unknown_transitions": 0,
+    "total_transitions": 11,
+    "mean_known_transition_prob": 0.09090908976063357,
+    "num_incoming_to_unknown": 831,
+    "incoming_transitions_sample": [
+        {
+            "from_state": ".,9,6",
+            "symbol": "0",
+            "probability": 0.06134259169544408
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "1",
+            "probability": 0.07870370255264524
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "2",
+            "probability": 0.08912036906696592
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "3",
+            "probability": 0.07870370255264524
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "4",
+            "probability": 0.08912036906696592
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "5",
+            "probability": 0.12962962773376863
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "6",
+            "probability": 0.11458333165752761
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "7",
+            "probability": 0.11458333165752761
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "8",
+            "probability": 0.12962962773376863
+        },
+        {
+            "from_state": ".,9,6",
+            "symbol": "9",
+            "probability": 0.11458333165752761
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "0",
+            "probability": 0.05781390938058094
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "1",
+            "probability": 0.07407407139386933
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "2",
+            "probability": 0.06534176216451075
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "3",
+            "probability": 0.08370972295729949
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "4",
+            "probability": 0.12225232921102011
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "5",
+            "probability": 0.12225232921102011
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "6",
+            "probability": 0.10779885186587487
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "7",
+            "probability": 0.12225232921102011
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "8",
+            "probability": 0.12225232921102011
+        },
+        {
+            "from_state": ".,9,9,6",
+            "symbol": "9",
+            "probability": 0.12225232921102011
+        }
+    ]
+}

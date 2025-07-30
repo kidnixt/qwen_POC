@@ -1,0 +1,9 @@
+{
+    "name": "PDFA - 9c31f25ba3354b19a4858ebfda93f586",
+    "num_states": 94,
+    "num_final_states": 92,
+    "alphabet_size": 11,
+    "num_transitions": 1034,
+    "initial_state": "\u03f5",
+    "terminal_symbol": "<|im_end|>"
+}

@@ -26,6 +26,8 @@ from pythautomata.model_exporters.dot_exporters.wfa_dot_exporting_strategy impor
 from collections import defaultdict, Counter
 from typing import List, Dict, Any, Tuple
 from pythautomata.base_types.sequence import Sequence
+from scipy.spatial.distance import jensenshannon
+
 
 
 # Variables globales para controlar la verbosidad
@@ -209,6 +211,106 @@ def analyze_unknown_state(pdfa):
     }
     return result
 
+def normalize_distribution(dist: List[float]) -> np.ndarray:
+    # Limpia valores negativos o inválidos, los pone a 0
+    clean_dist = np.array([max(0.0, p) for p in dist], dtype=np.float64)
+    s = clean_dist.sum()
+    if s > 0:
+        return clean_dist / s
+    else:
+        # Si suma 0, retornamos distribución uniforme
+        n = len(dist)
+        return np.ones(n) / n
+
+def extract_and_normalize_distribution(state, alphabet, terminal_symbol) -> np.ndarray:
+    dist = []
+    dist.append(state.final_weight)
+    for symbol in sorted(alphabet, key=str):
+        transitions = state.transitions_list.get(symbol, [])
+        if len(transitions) == 1:
+            _, prob = transitions[0]
+            dist.append(prob)
+        elif len(transitions) == 0:
+            dist.append(0.0)
+        else:
+            prob_sum = sum(prob for _, prob in transitions)
+            dist.append(prob_sum)
+    return normalize_distribution(dist)
+
+def compute_jsd_between_distributions(dist1: np.ndarray, dist2: np.ndarray) -> float:
+    return jensenshannon(dist1, dist2)
+
+def analyze_jsd(
+    pdfa,
+    distribution_classes: List[Dict],
+    unknown_state_name: str = "UNKNOWN"
+) -> Dict:
+
+    alphabet = pdfa.alphabet.symbols
+    terminal = pdfa.terminal_symbol
+
+    # Map name -> normalized distribution
+    state_distributions = {}
+
+    for state in pdfa.weighted_states:
+        dist = extract_and_normalize_distribution(state, alphabet, terminal)
+        state_distributions[state.name] = dist
+
+    # Lista con todos los estados para iterar
+    all_states = list(state_distributions.keys())
+
+    # Pre-calculo JSD para todos pares (matriz simétrica)
+    jsd_all_pairs = []
+    n = len(all_states)
+    for i in range(n):
+        for j in range(i+1, n):
+            d1 = state_distributions[all_states[i]]
+            d2 = state_distributions[all_states[j]]
+            dist_jsd = compute_jsd_between_distributions(d1, d2)
+            jsd_all_pairs.append({
+                "state1": all_states[i],
+                "state2": all_states[j],
+                "jsd": dist_jsd
+            })
+
+    # JSD dentro de cada clase (usando distribution_classes)
+    jsd_within_classes = {}
+    for cls in distribution_classes:
+        states_in_class = cls["states"]
+        cls_pairs_jsd = []
+        m = len(states_in_class)
+        for i in range(m):
+            for j in range(i+1, m):
+                s1 = states_in_class[i]
+                s2 = states_in_class[j]
+                if s1 in state_distributions and s2 in state_distributions:
+                    dist_jsd = compute_jsd_between_distributions(state_distributions[s1], state_distributions[s2])
+                    cls_pairs_jsd.append({
+                        "state1": s1,
+                        "state2": s2,
+                        "jsd": dist_jsd
+                    })
+        jsd_within_classes[str(cls["quantized_distribution"])] = cls_pairs_jsd
+
+    # JSD entre UNKNOWN y todos los demás estados
+    jsd_unknown_vs_others = []
+    if unknown_state_name in state_distributions:
+        dist_unknown = state_distributions[unknown_state_name]
+        for s in all_states:
+            if s != unknown_state_name:
+                dist_jsd = compute_jsd_between_distributions(dist_unknown, state_distributions[s])
+                jsd_unknown_vs_others.append({
+                    "unknown_state": unknown_state_name,
+                    "other_state": s,
+                    "jsd": dist_jsd
+                })
+
+    return {
+        "jsd_all_pairs": jsd_all_pairs,
+        "jsd_within_classes": jsd_within_classes,
+        "jsd_unknown_vs_others": jsd_unknown_vs_others
+    }
+
 def get_qwen_model_and_tokenizer():
     torch.manual_seed(42)
 
@@ -276,7 +378,7 @@ def sample():
                                                          max_seq_length=synch_max_seq_length,
                                                          normalize_outputs=synch_normalize_outputs)
 
-    kappa = 4
+    kappa = 1
     partitioner = QuantizationProbabilityPartitionerPlus(kappa)
     comparator = WFAPartitionComparator(partitioner)
 
@@ -333,6 +435,12 @@ def sample():
     unknown_info_filename = os.path.join(output_dir, f"{timestamp}_unknown_info.json")
     with open (unknown_info_filename, "w") as f:
         json.dump(unknown_info, f, indent = 4)
+
+
+    jsd_info = analyze_jsd(pdfa, distribution_info["distribution_classes"], unknown_state_name="UNKNOWN")
+    jsd_info_filename = os.path.join(output_dir, f"{timestamp}_jsd_info.json")
+    with open (jsd_info_filename, "w") as f:
+        json.dump(serialize_for_json(jsd_info), f, indent = 4)
 
     print_if_not_silent("\nExporting learned PDFA to DOT file...")
     exporter = WFADotExportingStrategy()
