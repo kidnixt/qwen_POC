@@ -6,6 +6,10 @@ import os
 import argparse
 import numpy as np
 import json
+import json
+import math
+
+
 
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
@@ -19,6 +23,8 @@ from pythautomata.model_comparators.wfa_partition_comparison_strategy import WFA
 from pythautomata.utilities.pdfa_operations import get_representative_sample
 from pythautomata.utilities.probability_partitioner import QuantizationProbabilityPartitionerPlus
 from pythautomata.model_exporters.dot_exporters.wfa_dot_exporting_strategy import WFADotExportingStrategy
+from collections import defaultdict, Counter
+from typing import List, Dict, Any, Tuple
 
 # Variables globales para controlar la verbosidad
 VERBOSE = False
@@ -33,6 +39,16 @@ def print_if_verbose(message):
     """Auxiliary function to print only if VERBOSE is True and SILENT is not True."""
     if VERBOSE and not SILENT:
         print(message)
+
+def serialize_for_json(obj):
+    if isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_for_json(x) for x in obj]
+    elif 'Sequence' in str(type(obj)):
+        return str(obj)
+    else:
+        return obj
 
 
 def get_pdfa_summary_stats(pdfa) -> dict:
@@ -60,6 +76,91 @@ def get_pdfa_summary_stats(pdfa) -> dict:
         "terminal_symbol": terminal_symbol_str
     }
 
+
+def quantize_probability(p: float, kappa: int) -> int:
+    """
+    Quantiza una probabilidad p ∈ [0,1] en un entero entre 0 y kappa,
+    correspondiendo a los intervalos [0], (0, 1/kappa), [1/kappa, 2/kappa), ..., [1].
+    """
+    if p < 0:
+        # Aquí puedes decidir qué hacer con valores negativos (e.g., -1 placeholder)
+        return -1
+    if p == 0.0:
+        return 0
+    if p == 1.0:
+        return kappa
+    # Para p entre 0 y 1, calcular el bucket que contiene p (1-based)
+    bucket = int(math.ceil(p * kappa))
+    return bucket
+
+
+def quantize_distribution(dist: List[float], kappa: int) -> Tuple[int, ...]:
+    """
+    Quantiza una distribución de probabilidades elemento a elemento.
+    Devuelve una tupla de enteros cuantizados.
+    """
+    return tuple(quantize_probability(p, kappa) for p in dist)
+
+
+def extract_state_distribution(state, alphabet, terminal_symbol) -> List[float]:
+    """
+    Extrae la distribución completa (final + transiciones) de un estado:
+    - final_weight para terminal_symbol
+    - probabilidades de transición para cada símbolo del alfabeto
+    Devuelve una lista de floats en orden: [final_weight, p(s1), p(s2), ...]
+    """
+    dist = []
+    dist.append(state.final_weight)
+
+    for symbol in sorted(alphabet, key=str):  # orden consistente por nombre
+        transitions = state.transitions_list.get(symbol, [])
+        if len(transitions) == 1:
+            _, prob = transitions[0]
+            dist.append(prob)
+        elif len(transitions) == 0:
+            # No hay transición: asumimos probabilidad 0
+            dist.append(0.0)
+        else:
+            # Si hay más de una transición (no esperado en PDFA)
+            # Tomamos suma o promedio (por ahora suma)
+            prob_sum = sum(prob for _, prob in transitions)
+            dist.append(prob_sum)
+    return dist
+
+
+def analyze_quantized_distribution_classes(pdfa, kappa: int = 10) -> Dict[str, Any]:
+    """
+    Analiza las clases de distribuciones de estados de un PDFA en base a quantization.
+    Retorna:
+      - número de clases únicas
+      - histogramas de tamaño de clase
+      - listado de clases con estados y distribución cuantizada
+    """
+    dist_to_states = defaultdict(list)
+    alphabet = pdfa.alphabet.symbols
+    terminal = pdfa.terminal_symbol
+
+    for state in pdfa.weighted_states:
+        dist = extract_state_distribution(state, alphabet, terminal)
+        qdist = quantize_distribution(dist, kappa)
+        dist_to_states[qdist].append(state.name)
+
+    class_size_hist = Counter(len(states) for states in dist_to_states.values())
+
+    distribution_classes = []
+    for dist, states in dist_to_states.items():
+        distribution_classes.append({
+            "quantized_distribution": dist,
+            "num_states": len(states),
+            "states": states[:20]  # máximo 20 estados para imprimir
+        })
+
+    return {
+        "kappa": kappa,
+        "num_unique_distributions": len(dist_to_states),
+        "distribution_classes": distribution_classes,
+        "class_size_histogram": dict(class_size_hist)
+    }
 
 
 def get_qwen_model_and_tokenizer():
@@ -129,7 +230,7 @@ def sample():
                                                          max_seq_length=synch_max_seq_length,
                                                          normalize_outputs=synch_normalize_outputs)
 
-    kappa = 1000
+    kappa = 10
     partitioner = QuantizationProbabilityPartitionerPlus(kappa)
     comparator = WFAPartitionComparator(partitioner)
 
@@ -174,6 +275,15 @@ def sample():
     
     with open(summary_filename, "w") as f:
         json.dump(pdfa_summary, f, indent=4)
+
+    distribution_info = analyze_quantized_distribution_classes(pdfa, kappa=kappa)
+
+    serializable_distribution_info = serialize_for_json(distribution_info)
+
+    dist_output_path = os.path.join(output_dir, f"{timestamp}_pdfa_distribution_classes.json")
+    with open(dist_output_path, "w") as f:
+        json.dump(serializable_distribution_info, f, indent=4)
+    print_if_not_silent(f"Guardado resumen de clases de distribución en: {dist_output_path}")
 
 
     print_if_not_silent("\nExporting learned PDFA to DOT file...")
